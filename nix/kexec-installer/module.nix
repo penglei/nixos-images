@@ -1,19 +1,19 @@
 { config, lib, modulesPath, pkgs, ... }:
 let
-  writePython3 = pkgs.writers.makePythonWriter
-    pkgs.python3Minimal pkgs.python3Packages pkgs.buildPackages.python3Packages;
+  writePython3 =
+    pkgs.writers.makePythonWriter pkgs.python3Minimal pkgs.python3Packages
+    pkgs.buildPackages.python3Packages;
 
   # writePython3Bin takes the same arguments as writePython3 but outputs a directory (like writeScriptBin)
   writePython3Bin = name: writePython3 "/bin/${name}";
 
-  restore-network = writePython3Bin "restore-network" {
-     flakeIgnore = [ "E501" ];
-  } ./restore_routes.py;
+  restore-network =
+    writePython3Bin "restore-network" { flakeIgnore = [ "E501" ]; }
+    ./restore_routes.py;
 
   # does not link with iptables enabled
   iprouteStatic = pkgs.pkgsStatic.iproute2.override { iptables = null; };
-in
-{
+in {
   imports = [
     (modulesPath + "/installer/netboot/netboot-minimal.nix")
     ../installer.nix
@@ -34,6 +34,13 @@ in
 
   config = {
     boot.initrd.compressor = "xz";
+
+    boot.initrd.availableKernelModules = [ "ahci" "megaraid_sas" ];
+    services.openssh.enable = true;
+    users.users.root.openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIQG7W1vDUCVEklJQtUtr9Jtp5hnY2k/cMGzOwNcfexY"
+    ];
+
     # This is a variant of the upstream kexecScript that also allows embedding
     # a ssh key.
     system.build.kexecRun = pkgs.runCommand "kexec-run" { } ''
